@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title></title>
+    <meta charset="utf-8" />
+</head>
+<body>
+    聊天记录:<div id="messageList" style="border: 1px solid black; padding: 5px;">
+    </div>
+    用户名:<input type="text" id="sender" /><br />
+    发送给在线用户:<select id="receiver"></select><br />
+    内容:<input type="text" id="content" /><br />
+    <input type="button" id="btnSend" value="发送" /><br />
+    1、实时在线用户
+    2、回车快捷键发送
+    <script type="text/javascript" src="jquery.js"></script>
+    <script type="text/javascript">
+        $("#btnSend").click(function () {
+            $.post("SendHandler.ashx",
+            { content: $("#content").val(), sender: $("#sender").val(), receiver: $("#receiver").val() }, 
+            function () {
+                $("#messageList").append($("<p>").text("你对" + $("#receiver").val() + "说:" + $("#content").val()));
+                $("#content").val('');
+            });
+        });
+        function getExistReceives() {
+            var existReceives = [];
+            $("#receiver>option").each(function () {
+                existReceives.push($(this).attr("value"));
+            });
+            return existReceives.join();
+        };
+        function receive()
+        {
+            $.ajax("ReceiveHandler.ashx", {
+                data: {
+                    receiver: $("#sender").val()
+                    , existReceivers: getExistReceives()
+                },
+                dataType: "json",
+                cache:false,
+                success: function (data) {
+                    if (data) {
+                        switch (data.Action) {
+                            case "Communication": $("#messageList").append($("<p>").text(data.Sender+"对你说:"+data.Content)); break;
+                            case "Online":
+                                $("#receiver").empty();
+                                $(data.Content.split(",")).each(function () {
+                                    $("<option>", { value: this }).text(this).appendTo($("#receiver"));
+                                });
+                                break;
+                        }
+
+                    }
+                },
+                complete: function () {
+                    receive();
+                }
+            })
+    };
+    $("#sender").blur(function () {
+        $(this).attr("disabled", true);
+        receive();
+    });
+    $("#content").keypress(function (event) {
+        if(event.keyCode=="13")$("#btnSend").click();
+    });
+    </script>
+</body>
+</html>
